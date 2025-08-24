@@ -57,6 +57,10 @@
 
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
-  <script>requireAuthOrGuest();</script>
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    requireAuthOrGuest();
+  });
+</script>
 </body>
 </html>
