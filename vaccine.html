@@ -55,9 +55,10 @@
   <script  src="app.js"></script>
 <!-- 
   <script src="app.js"></script> -->
-  <script>
-  // Ensure only logged-in users or guests can see this page
-  requireAuthOrGuest();
+ <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    requireAuthOrGuest();
+  });
 </script>
 </body>
 </html>
