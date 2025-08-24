@@ -333,70 +333,84 @@ function loadPhotos(){
     });
 }
 // Save vet contact
-window.saveVet = async function(){
+// Save vet info
+async function saveVet() {
   const name = document.getElementById('vetName').value.trim();
   const phone = document.getElementById('vetPhone').value.trim();
-  const user = FB.auth.currentUser;
+  if (!name || !phone) return alert('Please fill both fields');
 
-  if(!name || !phone) return alert('Enter all fields');
-  if(!user) return alert('Login first');
-
-  await FB.db.collection('users').doc(user.uid).collection('vets').add({
-    name, phone, created: Date.now()
+  const userId = FB.auth.currentUser?.uid || 'guest';
+  await FB.db.collection('vets').add({
+    userId,
+    name,
+    phone,
+    timestamp: Date.now()
   });
 
   document.getElementById('vetName').value = '';
   document.getElementById('vetPhone').value = '';
   loadVets();
-};
+}
 
-// Load vet contacts
-async function loadVets(){
-  const user = FB.auth.currentUser;
-  if(!user) return;
+// Load and display saved vets
+async function loadVets() {
+  const userId = FB.auth.currentUser?.uid || 'guest';
   const list = document.getElementById('vetList');
   list.innerHTML = '';
-
-  const snapshot = await FB.db.collection('users').doc(user.uid).collection('vets').orderBy('created','desc').get();
-  snapshot.forEach(doc=>{
+  const snapshot = await FB.db.collection('vets')
+    .where('userId', '==', userId)
+    .orderBy('timestamp', 'desc')
+    .get();
+  snapshot.forEach(doc => {
+    const data = doc.data();
     const li = document.createElement('li');
-    li.textContent = `${doc.data().name} – ${doc.data().phone}`;
+    li.textContent = `${data.name} — ${data.phone}`;
     list.appendChild(li);
   });
 }
 
 // Call on page load
-window.addEventListener('DOMContentLoaded', loadVets);
-
-
-
-window.saveDietNote = async function(){
+window.addEventListener('DOMContentLoaded', () => {
+  requireAuthOrGuest();
+  loadVets();
+});
+// Save diet note
+async function saveDietNote() {
   const note = document.getElementById('dietNote').value.trim();
-  const user = FB.auth.currentUser;
-  if(!note) return alert('Enter a note');
-  if(!user) return alert('Login first');
+  if (!note) return alert('Enter a note');
 
-  await FB.db.collection('users').doc(user.uid).collection('dietNotes').add({
-    note, created: Date.now()
+  const userId = FB.auth.currentUser?.uid || 'guest';
+  await FB.db.collection('dietNotes').add({
+    userId,
+    note,
+    timestamp: Date.now()
   });
 
   document.getElementById('dietNote').value = '';
   loadDietNotes();
-};
+}
 
-async function loadDietNotes(){
-  const user = FB.auth.currentUser;
-  if(!user) return;
+// Load and display diet notes
+async function loadDietNotes() {
+  const userId = FB.auth.currentUser?.uid || 'guest';
   const list = document.getElementById('dietList');
   list.innerHTML = '';
-
-  const snapshot = await FB.db.collection('users').doc(user.uid).collection('dietNotes').orderBy('created','desc').get();
-  snapshot.forEach(doc=>{
+  const snapshot = await FB.db.collection('dietNotes')
+    .where('userId', '==', userId)
+    .orderBy('timestamp', 'desc')
+    .get();
+  snapshot.forEach(doc => {
+    const data = doc.data();
     const li = document.createElement('li');
-    li.textContent = doc.data().note;
+    li.textContent = data.note;
     list.appendChild(li);
   });
 }
 
-window.addEventListener('DOMContentLoaded', loadDietNotes);
+// Call on page load
+window.addEventListener('DOMContentLoaded', () => {
+  requireAuthOrGuest();
+  loadDietNotes();
+});
+
 
