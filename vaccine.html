@@ -58,12 +58,8 @@
  <script>
   window.addEventListener('DOMContentLoaded', async () => {
     // Wait until Firebase is ready
-    if(window.FB && FB.auth){
-      await requireAuthOrGuest(); // make requireAuthOrGuest async
-    }
-  });
-   window.addEventListener('DOMContentLoaded', () => {
-  requireAuthOrGuest();
+      await requireAuthOrGuest(); // make requireAuthOrGuest asyn
+ 
   loadVaccines();  // <-- ADD THIS
 });
 
