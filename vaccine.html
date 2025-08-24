@@ -62,6 +62,12 @@
       await requireAuthOrGuest(); // make requireAuthOrGuest async
     }
   });
+   window.addEventListener('DOMContentLoaded', () => {
+  requireAuthOrGuest();
+  loadVaccines();  // <-- ADD THIS
+});
+
 </script>
+  
 </body>
 </html>
