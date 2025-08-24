@@ -1,11 +1,10 @@
-// Simple helpers
+// ---------------------- Helpers ----------------------
 function qs(sel){ return document.querySelector(sel); }
 function show(id){ qs(id).classList.remove('hidden'); }
 function hide(id){ qs(id).classList.add('hidden'); }
 
-// Handle auth UI on index
+// ---------------------- AUTH UI ----------------------
 window.addEventListener('DOMContentLoaded', () => {
-  // Toggle between login/register views
   const toLogin = qs('#toLogin');
   const toRegister = qs('#toRegister');
   const loginPanel = qs('#loginPanel');
@@ -23,11 +22,17 @@ window.addEventListener('DOMContentLoaded', () => {
       const email = qs('#loginEmail').value.trim();
       const pass  = qs('#loginPassword').value;
       try{
-        await FB.auth.signInWithEmailAndPassword(email, pass);
+        await firebase.auth().signInWithEmailAndPassword(email, pass);
         localStorage.removeItem('pc_guest');
         location.href = 'dashboard.html';
       }catch(e){
-        alert(e.message);
+        if(e.code === "auth/user-not-found"){
+          alert("No account found. Please register.");
+        } else if(e.code === "auth/wrong-password"){
+          alert("Incorrect password.");
+        } else {
+          alert(e.message);
+        }
       }
     });
   }
@@ -39,11 +44,18 @@ window.addEventListener('DOMContentLoaded', () => {
       const email = qs('#registerEmail').value.trim();
       const pass  = qs('#registerPassword').value;
       try{
-        await FB.auth.createUserWithEmailAndPassword(email, pass);
+        await firebase.auth().createUserWithEmailAndPassword(email, pass);
         localStorage.removeItem('pc_guest');
         location.href = 'dashboard.html';
       }catch(e){
-        alert(e.message);
+        if(e.code === "auth/email-already-in-use"){
+          if(confirm("Email already registered. Do you want to login instead?")){
+            hide('#registerPanel'); show('#loginPanel');
+            qs('#loginEmail').value = email;
+          }
+        } else {
+          alert(e.message);
+        }
       }
     });
   }
@@ -58,24 +70,263 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Gate dashboard and other pages
+// ---------------------- Gate Pages ----------------------
 function requireAuthOrGuest(){
   const isGuest = localStorage.getItem('pc_guest') === '1';
-  FB.auth.onAuthStateChanged(user => {
+  firebase.auth().onAuthStateChanged(user => {
     if(user || isGuest){
       // ok
-    }else{
+      initPage();
+    } else {
       location.href = 'index.html';
     }
   });
 }
-
-// Expose for pages to call
 window.requireAuthOrGuest = requireAuthOrGuest;
 
-// Logout (on dashboard)
+// ---------------------- Logout ----------------------
 window.doLogout = async function(){
   localStorage.removeItem('pc_guest');
-  await FB.auth.signOut();
+  await firebase.auth().signOut();
   location.href = 'index.html';
 };
+
+// ---------------------- Page Init ----------------------
+function initPage(){
+  const page = document.body.dataset.page;
+  if(page === "vaccine") { initVaccine(); loadVaccines(); }
+  if(page === "care") { loadVets(); }
+  if(page === "diet") { loadDietNotes(); }
+  if(page === "expenses") { loadExpenses(); }
+  if(page === "photos") { loadPhotos(); }
+}
+
+// ---------------------- VACCINES ----------------------
+function initVaccine(){
+  const vacForm = qs("#vacForm");
+  if(!vacForm) return;
+  vacForm.addEventListener('submit', event=>{
+    event.preventDefault();
+    addVaccine();
+  });
+}
+
+function addVaccine(){
+  const name = qs("#vacName").value;
+  const given = qs("#vacGiven").value;
+  const next = qs("#vacNext").value;
+  const notes = qs("#vacNotes").value;
+  const user = firebase.auth().currentUser;
+  if(!user){ alert("Login first!"); return; }
+  if(!name || !given){ alert("Enter vaccine and date"); return; }
+
+  firebase.firestore().collection("vaccines").add({
+    uid: user.uid,
+    name, given, next, notes,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=> { qs("#vacForm").reset(); loadVaccines(); })
+    .catch(err=> console.error(err));
+}
+
+function loadVaccines(){
+  const vacBody = qs("#vacBody");
+  if(!vacBody) return;
+  vacBody.innerHTML = "";
+  const user = firebase.auth().currentUser;
+  if(!user) return;
+
+  firebase.firestore().collection("vaccines")
+    .where("uid","==",user.uid)
+    .orderBy("timestamp","desc")
+    .get().then(snapshot=>{
+      snapshot.forEach(doc=>{
+        const data = doc.data();
+        let nextClass = "";
+        if(data.next){
+          const today = new Date(), due = new Date(data.next);
+          if(due <= today) nextClass = "text-red-600 font-bold";
+        }
+        vacBody.innerHTML += `
+          <tr>
+            <td class="p-2">${data.name}</td>
+            <td class="p-2">${data.given}</td>
+            <td class="p-2 ${nextClass}">${data.next||"-"}</td>
+            <td class="p-2">${data.notes||"-"}</td>
+            <td class="p-2 text-right"><button onclick="deleteVaccine('${doc.id}')" class="text-red-500">Delete</button></td>
+          </tr>
+        `;
+      });
+    });
+}
+
+function deleteVaccine(id){
+  if(!confirm("Delete this vaccine?")) return;
+  firebase.firestore().collection("vaccines").doc(id).delete().then(loadVaccines);
+}
+
+// ---------------------- CARE / VETS ----------------------
+function saveVet(){
+  const name = qs("#vetName").value;
+  const phone = qs("#vetPhone").value;
+  const user = firebase.auth().currentUser;
+  if(!user){ alert("Login first!"); return; }
+  if(!name || !phone){ alert("Enter name & phone"); return; }
+
+  firebase.firestore().collection("vets").add({uid:user.uid,name,phone})
+    .then(()=>{
+      qs("#vetName").value="";
+      qs("#vetPhone").value="";
+      loadVets();
+    });
+}
+
+function loadVets(){
+  const list = qs("#vetList");
+  if(!list) return;
+  list.innerHTML="";
+  const user = firebase.auth().currentUser;
+  if(!user) return;
+
+  firebase.firestore().collection("vets")
+    .where("uid","==",user.uid)
+    .get().then(snapshot=>{
+      snapshot.forEach(doc=>{
+        const data = doc.data();
+        const li = document.createElement("li");
+        li.textContent = `${data.name} – ${data.phone}`;
+        list.appendChild(li);
+      });
+    });
+}
+
+// ---------------------- DIET ----------------------
+function saveDietNote(){
+  const note = qs("#dietNote").value;
+  const user = firebase.auth().currentUser;
+  if(!user){ alert("Login first!"); return; }
+  if(!note){ alert("Enter a note"); return; }
+
+  firebase.firestore().collection("dietNotes").add({
+    uid:user.uid,
+    note,
+    timestamp:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{ qs("#dietNote").value=""; loadDietNotes(); });
+}
+
+function loadDietNotes(){
+  const list = qs("#dietList");
+  if(!list) return;
+  list.innerHTML="";
+  const user = firebase.auth().currentUser;
+  if(!user) return;
+
+  firebase.firestore().collection("dietNotes")
+    .where("uid","==",user.uid)
+    .orderBy("timestamp","desc")
+    .get().then(snapshot=>{
+      snapshot.forEach(doc=>{
+        const li = document.createElement("li");
+        li.textContent = doc.data().note;
+        list.appendChild(li);
+      });
+    });
+}
+
+// ---------------------- EXPENSES ----------------------
+function addExpense(){
+  const title = qs("#exTitle").value;
+  const category = qs("#exCategory").value;
+  const amount = parseFloat(qs("#exAmount").value);
+  const date = qs("#exDate").value;
+  const user = firebase.auth().currentUser;
+  if(!user){ alert("Login first!"); return; }
+  if(!title || !category || !amount || !date){ alert("Complete all fields"); return; }
+
+  firebase.firestore().collection("expenses").add({
+    uid:user.uid,
+    title, category, amount, date,
+    timestamp:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{ qs("#exForm").reset(); loadExpenses(); });
+}
+
+function loadExpenses(){
+  const exTBody = qs("#exTBody");
+  const exTotal = qs("#exTotal");
+  if(!exTBody) return;
+  exTBody.innerHTML="";
+  let total=0;
+
+  const user = firebase.auth().currentUser;
+  if(!user) return;
+
+  firebase.firestore().collection("expenses")
+    .where("uid","==",user.uid)
+    .orderBy("timestamp","desc")
+    .get().then(snapshot=>{
+      snapshot.forEach(doc=>{
+        const data = doc.data();
+        total += data.amount;
+        exTBody.innerHTML += `<tr>
+          <td class="p-2">${data.title}</td>
+          <td class="p-2">${data.category}</td>
+          <td class="p-2">₹${data.amount.toFixed(2)}</td>
+          <td class="p-2">${data.date}</td>
+          <td class="p-2 text-right"><button onclick="deleteExpense('${doc.id}')" class="text-red-500">Delete</button></td>
+        </tr>`;
+      });
+      if(exTotal) exTotal.textContent = `₹${total.toFixed(2)}`;
+    });
+}
+
+function deleteExpense(id){
+  if(!confirm("Delete this expense?")) return;
+  firebase.firestore().collection("expenses").doc(id).delete().then(loadExpenses);
+}
+
+// ---------------------- PHOTOS ----------------------
+function uploadPhoto(){
+  const file = qs("#photoFile").files[0];
+  const month = qs("#photoMonth").value;
+  const caption = qs("#photoCaption").value;
+  const user = firebase.auth().currentUser;
+  if(!user){ alert("Login first!"); return; }
+  if(!file){ alert("Select a file"); return; }
+
+  const storageRef = firebase.storage().ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
+  storageRef.put(file).then(snapshot=>{
+    snapshot.ref.getDownloadURL().then(url=>{
+      firebase.firestore().collection("photos").add({
+        uid:user.uid,
+        url,
+        month,
+        caption,
+        timestamp:firebase.firestore.FieldValue.serverTimestamp()
+      }).then(()=>{
+        qs("#photoFile").value="";
+        qs("#photoCaption").value="";
+        qs("#photoMonth").value="";
+        loadPhotos();
+      });
+    });
+  });
+}
+
+function loadPhotos(){
+  const grid = qs("#photoGrid");
+  if(!grid) return;
+  grid.innerHTML="";
+  const user = firebase.auth().currentUser;
+  if(!user) return;
+
+  firebase.firestore().collection("photos")
+    .where("uid","==",user.uid)
+    .orderBy("timestamp","desc")
+    .get().then(snapshot=>{
+      snapshot.forEach(doc=>{
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.innerHTML = `<img src="${data.url}" class="w-full rounded shadow"><p class="text-sm">${data.caption||"-"}</p>`;
+        grid.appendChild(div);
+      });
+    });
+}
