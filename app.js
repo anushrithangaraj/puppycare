@@ -331,7 +331,6 @@ function loadPhotos(){
         grid.appendChild(div);
       });
     });
-}
 // Save vet contact
 // Save vet info
 async function saveVet() {
