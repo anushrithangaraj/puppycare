@@ -85,7 +85,6 @@ async function requireAuthOrGuest(){
 }
 window.requireAuthOrGuest = requireAuthOrGuest;
 
-
 // ---------------------- Logout ----------------------
 window.doLogout = async function(){
   localStorage.removeItem('pc_guest');
@@ -165,8 +164,6 @@ function deleteVaccine(id){
   if(!confirm("Delete this vaccine?")) return;
   firebase.firestore().collection("vaccines").doc(id).delete().then(loadVaccines);
 }
-
-
 
 // ---------------------- EXPENSES ----------------------
 function addExpense(){
@@ -264,10 +261,10 @@ function loadPhotos(){
         div.innerHTML = `<img src="${data.url}" class="w-full rounded shadow"><p class="text-sm">${data.caption||"-"}</p>`;
         grid.appendChild(div);
       });
-       });
+    });
 }
 
-// Save vet info
+// ---------------------- VETS ----------------------
 async function saveVet() {
   const name = document.getElementById('vetName').value.trim();
   const phone = document.getElementById('vetPhone').value.trim();
@@ -286,13 +283,11 @@ async function saveVet() {
   loadVets();
 }
 
-// Load and display saved vets
 async function loadVets() {
   const vetList = document.getElementById('vetList');
-  if (!vetList) return; // exit if element not present
+  if (!vetList) return;
   const userId = FB.auth.currentUser?.uid || 'guest';
-  const list = document.getElementById('vetList');
-  list.innerHTML = '';
+  vetList.innerHTML = '';
   const snapshot = await FB.db.collection('vets')
     .where('userId', '==', userId)
     .orderBy('timestamp', 'desc')
@@ -301,16 +296,11 @@ async function loadVets() {
     const data = doc.data();
     const li = document.createElement('li');
     li.textContent = `${data.name} — ${data.phone}`;
-    list.appendChild(li);
+    vetList.appendChild(li);
   });
 }
 
-// Call on page load
-window.addEventListener('DOMContentLoaded', () => {
-  requireAuthOrGuest();
-  loadVets();
-});
-// Save diet note
+// ---------------------- DIET ----------------------
 async function saveDietNote() {
   const note = document.getElementById('dietNote').value.trim();
   if (!note) return alert('Enter a note');
@@ -326,13 +316,11 @@ async function saveDietNote() {
   loadDietNotes();
 }
 
-// Load and display diet notes
 async function loadDietNotes() {
   const dietList = document.getElementById('dietList');
-  if (!dietList) return; // exit if element not present
+  if (!dietList) return;
   const userId = FB.auth.currentUser?.uid || 'guest';
-  const list = document.getElementById('dietList');
-  list.innerHTML = '';
+  dietList.innerHTML = '';
   const snapshot = await FB.db.collection('dietNotes')
     .where('userId', '==', userId)
     .orderBy('timestamp', 'desc')
@@ -341,14 +329,14 @@ async function loadDietNotes() {
     const data = doc.data();
     const li = document.createElement('li');
     li.textContent = data.note;
-    list.appendChild(li);
+    dietList.appendChild(li);
   });
 }
 
-// Call on page load
-window.addEventListener('DOMContentLoaded', () => {
-  requireAuthOrGuest();
+// ---------------------- DOMContentLoaded ----------------------
+window.addEventListener('DOMContentLoaded', async () => {
+  await requireAuthOrGuest();
+  loadVets();
   loadDietNotes();
+  initPage();
 });
-
-
