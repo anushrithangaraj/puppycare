@@ -330,8 +330,7 @@ function loadPhotos(){
         div.innerHTML = `<img src="${data.url}" class="w-full rounded shadow"><p class="text-sm">${data.caption||"-"}</p>`;
         grid.appendChild(div);
       });
-    });
-// Save vet contact
+
 // Save vet info
 async function saveVet() {
   const name = document.getElementById('vetName').value.trim();
