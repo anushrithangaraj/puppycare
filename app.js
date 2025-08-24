@@ -354,6 +354,8 @@ async function saveVet() {
 
 // Load and display saved vets
 async function loadVets() {
+  const vetList = document.getElementById('vetList');
+  if (!vetList) return; // exit if element not present
   const userId = FB.auth.currentUser?.uid || 'guest';
   const list = document.getElementById('vetList');
   list.innerHTML = '';
@@ -392,6 +394,8 @@ async function saveDietNote() {
 
 // Load and display diet notes
 async function loadDietNotes() {
+  const dietList = document.getElementById('dietList');
+  if (!dietList) return; // exit if element not present
   const userId = FB.auth.currentUser?.uid || 'guest';
   const list = document.getElementById('dietList');
   list.innerHTML = '';
