@@ -71,18 +71,20 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ---------------------- Gate Pages ----------------------
-function requireAuthOrGuest(){
-  const isGuest = localStorage.getItem('pc_guest') === '1';
-  firebase.auth().onAuthStateChanged(user => {
-    if(user || isGuest){
-      // ok
-      initPage();
-    } else {
-      location.href = 'index.html';
-    }
+async function requireAuthOrGuest(){
+  return new Promise(resolve => {
+    const isGuest = localStorage.getItem('pc_guest') === '1';
+    FB.auth.onAuthStateChanged(user => {
+      if(user || isGuest){
+        resolve(true); // allow page
+      } else {
+        location.href = 'index.html';
+      }
+    });
   });
 }
 window.requireAuthOrGuest = requireAuthOrGuest;
+
 
 // ---------------------- Logout ----------------------
 window.doLogout = async function(){
