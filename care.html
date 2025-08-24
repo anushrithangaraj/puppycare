@@ -51,6 +51,9 @@
   </main>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
-
+<script>
+  // Ensure only logged-in users or guests can see this page
+  requireAuthOrGuest();
+</script>
 </body>
 </html>
