@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PuppyCare • Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fff7ed, #fde68a, #fca5a5);
+      background-attachment: fixed;
+    }
+    .card { background: rgba(255,255,255,.9); border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,.08); }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+  <style>
+    body{
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fff7ed, #fde68a, #fca5a5);
+      background-attachment: fixed;
+    }
+    .card { background: rgba(255,255,255,.9); border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,.08); }
+  </style>
+</head>
+<body class="p-4">
+  <header class="max-w-4xl mx-auto flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-orange-700">🐾 PuppyCare</h1>
+    <button onclick="doLogout()" class="px-3 py-2 rounded-lg border bg-white">Logout</button>
+  </header>
+
+  <main class="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <a href="vaccine.html" class="card p-6 block text-center">
+      <div class="text-3xl">💉</div>
+      <div class="mt-2 font-semibold">Vaccine Tracker</div>
+    </a>
+    <a href="expenses.html" class="card p-6 block text-center">
+      <div class="text-3xl">💰</div>
+      <div class="mt-2 font-semibold">Expenses</div>
+    </a>
+    <a href="photos.html" class="card p-6 block text-center">
+      <div class="text-3xl">📸</div>
+      <div class="mt-2 font-semibold">Growth Photos</div>
+    </a>
+    <a href="diet.html" class="card p-6 block text-center">
+      <div class="text-3xl">🥩</div>
+      <div class="mt-2 font-semibold">Diet & Food</div>
+    </a>
+    <a href="care.html" class="card p-6 block text-center">
+      <div class="text-3xl">🚑</div>
+      <div class="mt-2 font-semibold">Care & Emergency</div>
+    </a>
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+  <script>requireAuthOrGuest();</script>
+</body>
+</html>

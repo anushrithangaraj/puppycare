@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PuppyCare • Vaccines</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+  <style>
+    body{
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fff7ed, #fde68a, #fca5a5);
+      background-attachment: fixed;
+    }
+    .card { background: rgba(255,255,255,.9); border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,.08); }
+  </style>
+</head>
+<body data-page="vaccine" class="bg-orange-50 min-h-screen">
+  <header class="max-w-5xl mx-auto p-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold">💉 Vaccination Tracker</h1>
+    <div class="flex gap-2 items-center">
+      <span id="modeBadge" class="px-2 py-1 rounded bg-gray-600 text-white text-xs">Guest mode</span>
+      <a href="dashboard.html" class="text-sm underline">Dashboard</a>
+      
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto p-4">
+    <div class="card bg-white p-4 mb-4">
+      <form id="vacForm" class="grid md:grid-cols-5 gap-3" onsubmit="event.preventDefault(); addVaccine();">
+        <input id="vacName" class="border rounded p-2 md:col-span-2" placeholder="Vaccine (e.g., DHPP)">
+        <input id="vacGiven" type="date" class="border rounded p-2" placeholder="Date given">
+        <input id="vacNext"  type="date" class="border rounded p-2" placeholder="Next due">
+        <input id="vacNotes" class="border rounded p-2" placeholder="Notes">
+        <button class="bg-orange-600 text-white rounded px-4 py-2 md:col-span-5">Add</button>
+      </form>
+      <p class="text-xs text-gray-500">“Next due” in red = due today/past due.</p>
+    </div>
+
+    <div class="card bg-white overflow-auto">
+      <table class="min-w-full">
+        <thead class="bg-orange-100">
+          <tr><th class="text-left p-2">Vaccine</th><th class="text-left p-2">Given</th><th class="text-left p-2">Next due</th><th class="text-left p-2">Notes</th><th class="text-right p-2">Action</th></tr>
+        </thead>
+        <tbody id="vacBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script  src="app.js"></script>
+<!-- 
+  <script src="app.js"></script> -->
+  
+</body>
+</html>
