@@ -49,13 +49,10 @@
   <script src="firebase-config.js"></script>
   <!-- <script src="app.js"></script> -->
   <script src="app.js"></script>
-<script>
-  window.addEventListener('DOMContentLoaded', async () => {
-    // Wait until Firebase is ready
-    if(window.FB && FB.auth){
-      await requireAuthOrGuest(); // make requireAuthOrGuest async
-    }
-  });
-</script>
+window.addEventListener('DOMContentLoaded', () => {
+  requireAuthOrGuest();
+  loadPhotos(); // <-- ADD THIS
+});
+
 </body>
 </html>
