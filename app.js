@@ -166,73 +166,7 @@ function deleteVaccine(id){
   firebase.firestore().collection("vaccines").doc(id).delete().then(loadVaccines);
 }
 
-// ---------------------- CARE / VETS ----------------------
-function saveVet(){
-  const name = qs("#vetName").value;
-  const phone = qs("#vetPhone").value;
-  const user = firebase.auth().currentUser;
-  if(!user){ alert("Login first!"); return; }
-  if(!name || !phone){ alert("Enter name & phone"); return; }
 
-  firebase.firestore().collection("vets").add({uid:user.uid,name,phone})
-    .then(()=>{
-      qs("#vetName").value="";
-      qs("#vetPhone").value="";
-      loadVets();
-    });
-}
-
-function loadVets(){
-  const list = qs("#vetList");
-  if(!list) return;
-  list.innerHTML="";
-  const user = firebase.auth().currentUser;
-  if(!user) return;
-
-  firebase.firestore().collection("vets")
-    .where("uid","==",user.uid)
-    .get().then(snapshot=>{
-      snapshot.forEach(doc=>{
-        const data = doc.data();
-        const li = document.createElement("li");
-        li.textContent = `${data.name} – ${data.phone}`;
-        list.appendChild(li);
-      });
-    });
-}
-
-// ---------------------- DIET ----------------------
-function saveDietNote(){
-  const note = qs("#dietNote").value;
-  const user = firebase.auth().currentUser;
-  if(!user){ alert("Login first!"); return; }
-  if(!note){ alert("Enter a note"); return; }
-
-  firebase.firestore().collection("dietNotes").add({
-    uid:user.uid,
-    note,
-    timestamp:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(()=>{ qs("#dietNote").value=""; loadDietNotes(); });
-}
-
-function loadDietNotes(){
-  const list = qs("#dietList");
-  if(!list) return;
-  list.innerHTML="";
-  const user = firebase.auth().currentUser;
-  if(!user) return;
-
-  firebase.firestore().collection("dietNotes")
-    .where("uid","==",user.uid)
-    .orderBy("timestamp","desc")
-    .get().then(snapshot=>{
-      snapshot.forEach(doc=>{
-        const li = document.createElement("li");
-        li.textContent = doc.data().note;
-        list.appendChild(li);
-      });
-    });
-}
 
 // ---------------------- EXPENSES ----------------------
 function addExpense(){
@@ -330,6 +264,8 @@ function loadPhotos(){
         div.innerHTML = `<img src="${data.url}" class="w-full rounded shadow"><p class="text-sm">${data.caption||"-"}</p>`;
         grid.appendChild(div);
       });
+       });
+}
 
 // Save vet info
 async function saveVet() {
