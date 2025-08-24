@@ -332,3 +332,71 @@ function loadPhotos(){
       });
     });
 }
+// Save vet contact
+window.saveVet = async function(){
+  const name = document.getElementById('vetName').value.trim();
+  const phone = document.getElementById('vetPhone').value.trim();
+  const user = FB.auth.currentUser;
+
+  if(!name || !phone) return alert('Enter all fields');
+  if(!user) return alert('Login first');
+
+  await FB.db.collection('users').doc(user.uid).collection('vets').add({
+    name, phone, created: Date.now()
+  });
+
+  document.getElementById('vetName').value = '';
+  document.getElementById('vetPhone').value = '';
+  loadVets();
+};
+
+// Load vet contacts
+async function loadVets(){
+  const user = FB.auth.currentUser;
+  if(!user) return;
+  const list = document.getElementById('vetList');
+  list.innerHTML = '';
+
+  const snapshot = await FB.db.collection('users').doc(user.uid).collection('vets').orderBy('created','desc').get();
+  snapshot.forEach(doc=>{
+    const li = document.createElement('li');
+    li.textContent = `${doc.data().name} – ${doc.data().phone}`;
+    list.appendChild(li);
+  });
+}
+
+// Call on page load
+window.addEventListener('DOMContentLoaded', loadVets);
+
+
+
+window.saveDietNote = async function(){
+  const note = document.getElementById('dietNote').value.trim();
+  const user = FB.auth.currentUser;
+  if(!note) return alert('Enter a note');
+  if(!user) return alert('Login first');
+
+  await FB.db.collection('users').doc(user.uid).collection('dietNotes').add({
+    note, created: Date.now()
+  });
+
+  document.getElementById('dietNote').value = '';
+  loadDietNotes();
+};
+
+async function loadDietNotes(){
+  const user = FB.auth.currentUser;
+  if(!user) return;
+  const list = document.getElementById('dietList');
+  list.innerHTML = '';
+
+  const snapshot = await FB.db.collection('users').doc(user.uid).collection('dietNotes').orderBy('created','desc').get();
+  snapshot.forEach(doc=>{
+    const li = document.createElement('li');
+    li.textContent = doc.data().note;
+    list.appendChild(li);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', loadDietNotes);
+
