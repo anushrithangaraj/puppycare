@@ -62,18 +62,20 @@ async function requireAuthOrGuest() {
   return new Promise(resolve => {
     const isGuest = localStorage.getItem('pc_guest') === '1';
     firebase.auth().onAuthStateChanged(user => {
+      const onDashboard = window.location.pathname.endsWith('dashboard.html');
       if(user || isGuest){
-        resolve(true);
-      } else if (!isGuest && window.location.pathname.endsWith('dashboard.html')) {
-        // Only redirect from protected pages
+        resolve(true); // allowed
+      } else if (onDashboard){
+        // redirect only from protected page
         location.href = 'index.html';
-      } else {
         resolve(false);
+      } else {
+        resolve(false); // do not redirect from public pages
       }
     });
   });
 }
-window.requireAuthOrGuest = requireAuthOrGuest;
+
 
 // ---------------------- Logout ----------------------
 window.doLogout = async function(){
@@ -296,6 +298,20 @@ async function loadPhotos(){
 
 // ---------------------- INIT ----------------------
 window.addEventListener('DOMContentLoaded', async () => {
-  await requireAuthOrGuest();
+  // Ensure Firebase is initialized
+  if(!firebase.apps.length){
+    console.error("Firebase not initialized!");
+    return;
+  }
+
+  // Wait for auth or guest check
+  const allowed = await requireAuthOrGuest();
+  if(!allowed){
+    console.log("User not allowed, redirecting handled in requireAuthOrGuest.");
+    return;
+  }
+
+  // Only now load page content
   initPage();
 });
+
