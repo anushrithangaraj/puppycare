@@ -1,7 +1,7 @@
 // ---------------------- Helpers ----------------------
-function qs(sel){ return document.querySelector(sel); }
-function show(id){ qs(id).classList.remove('hidden'); }
-function hide(id){ qs(id).classList.add('hidden'); }
+const qs = sel => document.querySelector(sel);
+const show = id => qs(id).classList.remove('hidden');
+const hide = id => qs(id).classList.add('hidden');
 
 // ---------------------- AUTH UI ----------------------
 window.addEventListener('DOMContentLoaded', () => {
@@ -21,18 +21,12 @@ window.addEventListener('DOMContentLoaded', () => {
     loginBtn.addEventListener('click', async () => {
       const email = qs('#loginEmail').value.trim();
       const pass  = qs('#loginPassword').value;
-      try{
+      try {
         await firebase.auth().signInWithEmailAndPassword(email, pass);
         localStorage.removeItem('pc_guest');
         location.href = 'dashboard.html';
-      }catch(e){
-        if(e.code === "auth/user-not-found"){
-          alert("No account found. Please register.");
-        } else if(e.code === "auth/wrong-password"){
-          alert("Incorrect password.");
-        } else {
-          alert(e.message);
-        }
+      } catch(e){
+        alert(e.message);
       }
     });
   }
@@ -43,19 +37,12 @@ window.addEventListener('DOMContentLoaded', () => {
     registerBtn.addEventListener('click', async () => {
       const email = qs('#registerEmail').value.trim();
       const pass  = qs('#registerPassword').value;
-      try{
+      try {
         await firebase.auth().createUserWithEmailAndPassword(email, pass);
         localStorage.removeItem('pc_guest');
         location.href = 'dashboard.html';
-      }catch(e){
-        if(e.code === "auth/email-already-in-use"){
-          if(confirm("Email already registered. Do you want to login instead?")){
-            hide('#registerPanel'); show('#loginPanel');
-            qs('#loginEmail').value = email;
-          }
-        } else {
-          alert(e.message);
-        }
+      } catch(e){
+        alert(e.message);
       }
     });
   }
@@ -71,14 +58,17 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ---------------------- Gate Pages ----------------------
-async function requireAuthOrGuest(){
+async function requireAuthOrGuest() {
   return new Promise(resolve => {
     const isGuest = localStorage.getItem('pc_guest') === '1';
-    FB.auth.onAuthStateChanged(user => {
+    firebase.auth().onAuthStateChanged(user => {
       if(user || isGuest){
-        resolve(true); // allow page
-      } else {
+        resolve(true);
+      } else if (!isGuest && window.location.pathname.endsWith('dashboard.html')) {
+        // Only redirect from protected pages
         location.href = 'index.html';
+      } else {
+        resolve(false);
       }
     });
   });
@@ -112,61 +102,78 @@ function initVaccine(){
   });
 }
 
-function addVaccine(){
+async function addVaccine(){
   const name = qs("#vacName").value;
   const given = qs("#vacGiven").value;
   const next = qs("#vacNext").value;
   const notes = qs("#vacNotes").value;
   const user = firebase.auth().currentUser;
+
   if(!user){ alert("Login first!"); return; }
   if(!name || !given){ alert("Enter vaccine and date"); return; }
 
-  firebase.firestore().collection("vaccines").add({
-    uid: user.uid,
-    name, given, next, notes,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(()=> { qs("#vacForm").reset(); loadVaccines(); })
-    .catch(err=> console.error(err));
+  try{
+    await firebase.firestore().collection("vaccines").add({
+      uid: user.uid,
+      name, given, next, notes,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    qs("#vacForm").reset();
+    loadVaccines();
+  } catch(err){
+    console.error(err);
+    alert("Error adding vaccine. Check permissions.");
+  }
 }
 
-function loadVaccines(){
+async function loadVaccines(){
   const vacBody = qs("#vacBody");
   if(!vacBody) return;
   vacBody.innerHTML = "";
   const user = firebase.auth().currentUser;
   if(!user) return;
 
-  firebase.firestore().collection("vaccines")
-    .where("uid","==",user.uid)
-    .orderBy("timestamp","desc")
-    .get().then(snapshot=>{
-      snapshot.forEach(doc=>{
-        const data = doc.data();
-        let nextClass = "";
-        if(data.next){
-          const today = new Date(), due = new Date(data.next);
-          if(due <= today) nextClass = "text-red-600 font-bold";
-        }
-        vacBody.innerHTML += `
-          <tr>
-            <td class="p-2">${data.name}</td>
-            <td class="p-2">${data.given}</td>
-            <td class="p-2 ${nextClass}">${data.next||"-"}</td>
-            <td class="p-2">${data.notes||"-"}</td>
-            <td class="p-2 text-right"><button onclick="deleteVaccine('${doc.id}')" class="text-red-500">Delete</button></td>
-          </tr>
-        `;
-      });
+  try{
+    const snapshot = await firebase.firestore().collection("vaccines")
+      .where("uid","==",user.uid)
+      .orderBy("timestamp","desc")
+      .get();
+    snapshot.forEach(doc=>{
+      const data = doc.data();
+      let nextClass = "";
+      if(data.next){
+        const today = new Date(), due = new Date(data.next);
+        if(due <= today) nextClass = "text-red-600 font-bold";
+      }
+      vacBody.innerHTML += `
+        <tr>
+          <td class="p-2">${data.name}</td>
+          <td class="p-2">${data.given}</td>
+          <td class="p-2 ${nextClass}">${data.next||"-"}</td>
+          <td class="p-2">${data.notes||"-"}</td>
+          <td class="p-2 text-right"><button onclick="deleteVaccine('${doc.id}')" class="text-red-500">Delete</button></td>
+        </tr>
+      `;
     });
+  } catch(err){
+    console.error(err);
+    alert("Error loading vaccines.");
+  }
 }
 
-function deleteVaccine(id){
+async function deleteVaccine(id){
   if(!confirm("Delete this vaccine?")) return;
-  firebase.firestore().collection("vaccines").doc(id).delete().then(loadVaccines);
+  try{
+    await firebase.firestore().collection("vaccines").doc(id).delete();
+    loadVaccines();
+  } catch(err){
+    console.error(err);
+    alert("Error deleting vaccine.");
+  }
 }
 
 // ---------------------- EXPENSES ----------------------
-function addExpense(){
+async function addExpense(){
   const title = qs("#exTitle").value;
   const category = qs("#exCategory").value;
   const amount = parseFloat(qs("#exAmount").value);
@@ -175,14 +182,21 @@ function addExpense(){
   if(!user){ alert("Login first!"); return; }
   if(!title || !category || !amount || !date){ alert("Complete all fields"); return; }
 
-  firebase.firestore().collection("expenses").add({
-    uid:user.uid,
-    title, category, amount, date,
-    timestamp:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(()=>{ qs("#exForm").reset(); loadExpenses(); });
+  try{
+    await firebase.firestore().collection("expenses").add({
+      uid:user.uid,
+      title, category, amount, date,
+      timestamp:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    qs("#exForm").reset();
+    loadExpenses();
+  } catch(err){
+    console.error(err);
+    alert("Error adding expense.");
+  }
 }
 
-function loadExpenses(){
+async function loadExpenses(){
   const exTBody = qs("#exTBody");
   const exTotal = qs("#exTotal");
   if(!exTBody) return;
@@ -192,32 +206,42 @@ function loadExpenses(){
   const user = firebase.auth().currentUser;
   if(!user) return;
 
-  firebase.firestore().collection("expenses")
-    .where("uid","==",user.uid)
-    .orderBy("timestamp","desc")
-    .get().then(snapshot=>{
-      snapshot.forEach(doc=>{
-        const data = doc.data();
-        total += data.amount;
-        exTBody.innerHTML += `<tr>
-          <td class="p-2">${data.title}</td>
-          <td class="p-2">${data.category}</td>
-          <td class="p-2">₹${data.amount.toFixed(2)}</td>
-          <td class="p-2">${data.date}</td>
-          <td class="p-2 text-right"><button onclick="deleteExpense('${doc.id}')" class="text-red-500">Delete</button></td>
-        </tr>`;
-      });
-      if(exTotal) exTotal.textContent = `₹${total.toFixed(2)}`;
+  try{
+    const snapshot = await firebase.firestore().collection("expenses")
+      .where("uid","==",user.uid)
+      .orderBy("timestamp","desc")
+      .get();
+    snapshot.forEach(doc=>{
+      const data = doc.data();
+      total += data.amount;
+      exTBody.innerHTML += `<tr>
+        <td class="p-2">${data.title}</td>
+        <td class="p-2">${data.category}</td>
+        <td class="p-2">₹${data.amount.toFixed(2)}</td>
+        <td class="p-2">${data.date}</td>
+        <td class="p-2 text-right"><button onclick="deleteExpense('${doc.id}')" class="text-red-500">Delete</button></td>
+      </tr>`;
     });
+    if(exTotal) exTotal.textContent = `₹${total.toFixed(2)}`;
+  } catch(err){
+    console.error(err);
+    alert("Error loading expenses.");
+  }
 }
 
-function deleteExpense(id){
+async function deleteExpense(id){
   if(!confirm("Delete this expense?")) return;
-  firebase.firestore().collection("expenses").doc(id).delete().then(loadExpenses);
+  try{
+    await firebase.firestore().collection("expenses").doc(id).delete();
+    loadExpenses();
+  } catch(err){
+    console.error(err);
+    alert("Error deleting expense.");
+  }
 }
 
 // ---------------------- PHOTOS ----------------------
-function uploadPhoto(){
+async function uploadPhoto(){
   const file = qs("#photoFile").files[0];
   const month = qs("#photoMonth").value;
   const caption = qs("#photoCaption").value;
@@ -225,118 +249,53 @@ function uploadPhoto(){
   if(!user){ alert("Login first!"); return; }
   if(!file){ alert("Select a file"); return; }
 
-  const storageRef = firebase.storage().ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
-  storageRef.put(file).then(snapshot=>{
-    snapshot.ref.getDownloadURL().then(url=>{
-      firebase.firestore().collection("photos").add({
-        uid:user.uid,
-        url,
-        month,
-        caption,
-        timestamp:firebase.firestore.FieldValue.serverTimestamp()
-      }).then(()=>{
-        qs("#photoFile").value="";
-        qs("#photoCaption").value="";
-        qs("#photoMonth").value="";
-        loadPhotos();
-      });
+  try{
+    const storageRef = firebase.storage().ref(`photos/${user.uid}/${Date.now()}_${file.name}`);
+    const snapshot = await storageRef.put(file);
+    const url = await snapshot.ref.getDownloadURL();
+    await firebase.firestore().collection("photos").add({
+      uid:user.uid,
+      url,
+      month,
+      caption,
+      timestamp:firebase.firestore.FieldValue.serverTimestamp()
     });
-  });
+    qs("#photoFile").value="";
+    qs("#photoCaption").value="";
+    qs("#photoMonth").value="";
+    loadPhotos();
+  } catch(err){
+    console.error(err);
+    alert("Error uploading photo. Check CORS and permissions.");
+  }
 }
 
-function loadPhotos(){
+async function loadPhotos(){
   const grid = qs("#photoGrid");
   if(!grid) return;
   grid.innerHTML="";
   const user = firebase.auth().currentUser;
   if(!user) return;
 
-  firebase.firestore().collection("photos")
-    .where("uid","==",user.uid)
-    .orderBy("timestamp","desc")
-    .get().then(snapshot=>{
-      snapshot.forEach(doc=>{
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.innerHTML = `<img src="${data.url}" class="w-full rounded shadow"><p class="text-sm">${data.caption||"-"}</p>`;
-        grid.appendChild(div);
-      });
+  try{
+    const snapshot = await firebase.firestore().collection("photos")
+      .where("uid","==",user.uid)
+      .orderBy("timestamp","desc")
+      .get();
+    snapshot.forEach(doc=>{
+      const data = doc.data();
+      const div = document.createElement("div");
+      div.innerHTML = `<img src="${data.url}" class="w-full rounded shadow"><p class="text-sm">${data.caption||"-"}</p>`;
+      grid.appendChild(div);
     });
+  } catch(err){
+    console.error(err);
+    alert("Error loading photos.");
+  }
 }
 
-// ---------------------- VETS ----------------------
-async function saveVet() {
-  const name = document.getElementById('vetName').value.trim();
-  const phone = document.getElementById('vetPhone').value.trim();
-  if (!name || !phone) return alert('Please fill both fields');
-
-  const userId = FB.auth.currentUser?.uid || 'guest';
-  await FB.db.collection('vets').add({
-    userId,
-    name,
-    phone,
-    timestamp: Date.now()
-  });
-
-  document.getElementById('vetName').value = '';
-  document.getElementById('vetPhone').value = '';
-  loadVets();
-}
-
-async function loadVets() {
-  const vetList = document.getElementById('vetList');
-  if (!vetList) return;
-  const userId = FB.auth.currentUser?.uid || 'guest';
-  vetList.innerHTML = '';
-  const snapshot = await FB.db.collection('vets')
-    .where('userId', '==', userId)
-    .orderBy('timestamp', 'desc')
-    .get();
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    const li = document.createElement('li');
-    li.textContent = `${data.name} — ${data.phone}`;
-    vetList.appendChild(li);
-  });
-}
-
-// ---------------------- DIET ----------------------
-async function saveDietNote() {
-  const note = document.getElementById('dietNote').value.trim();
-  if (!note) return alert('Enter a note');
-
-  const userId = FB.auth.currentUser?.uid || 'guest';
-  await FB.db.collection('dietNotes').add({
-    userId,
-    note,
-    timestamp: Date.now()
-  });
-
-  document.getElementById('dietNote').value = '';
-  loadDietNotes();
-}
-
-async function loadDietNotes() {
-  const dietList = document.getElementById('dietList');
-  if (!dietList) return;
-  const userId = FB.auth.currentUser?.uid || 'guest';
-  dietList.innerHTML = '';
-  const snapshot = await FB.db.collection('dietNotes')
-    .where('userId', '==', userId)
-    .orderBy('timestamp', 'desc')
-    .get();
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    const li = document.createElement('li');
-    li.textContent = data.note;
-    dietList.appendChild(li);
-  });
-}
-
-// ---------------------- DOMContentLoaded ----------------------
+// ---------------------- INIT ----------------------
 window.addEventListener('DOMContentLoaded', async () => {
   await requireAuthOrGuest();
-  loadVets();
-  loadDietNotes();
   initPage();
 });
